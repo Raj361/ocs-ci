@@ -7,17 +7,29 @@ from ocs_ci.ocs.resources.ocs import OCS
 from ocs_ci.utility.utils import run_cmd
 from ocs_ci.ocs.exceptions import CommandFailed
 
-from tests.helpers import create_unique_resource_name, \
-    get_admin_key, get_cephfs_name, get_cephfs_data_pool_name
+from tests.helpers import (create_unique_resource_name,
+                           get_admin_key, get_cephfs_name,
+                           get_cephfs_data_pool_name)
 
-logger = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 
 class Container(object):
     """
     Container Storage class
 
-    TODO: Document Args
+    Args:
+        interface_type (str): type of interface to use RBD or FS
+        block_pool_name (str): name of the ceph block pool name
+        reclaim_policy (str): pvc recliam policy (retain/delete)
+        sc_name (str): Storage class metadata name
+        pvc_name (str): PVC metadata name
+        access_mode (str): Access mode for PVC - RWO/RWX/ROX
+        namespace (str): namespace for the PVC
+        wait (bool): whether to wait for PVC to be in BOUND state
+        size (int): Size of the PVC in GB
+        cleanup (bool): If true, the previously created objects are cleanedup
+
     """
     def __init__(self,
                  interface_type=constants.CEPHBLOCKPOOL,
@@ -57,7 +69,7 @@ class Container(object):
 
     def _setup_rbd_secret(self):
         """"
-         Setup RBD secret
+        Setup RBD secret
         """
         self.secret_data = templating.load_yaml_to_dict(
             constants.CSI_RBD_SECRET_YAML
@@ -83,8 +95,8 @@ class Container(object):
         """
         Setup secret data name
         """
-        self.secret_data['metadata']['namespace'] = \
-            defaults.ROOK_CLUSTER_NAMESPACE
+        self.secret_data['metadata']['namespace'] = (
+            defaults.ROOK_CLUSTER_NAMESPACE)
         self.secret_data_name = create_unique_resource_name('test', 'secret')
         self.secret_data['metadata']['name'] = self.secret_data_name
 
@@ -99,6 +111,9 @@ class Container(object):
         self.block_data['metadata']['namespace'] = defaults.ROOK_CLUSTER_NAMESPACE
 
     def _setup_rbd_storageclass(self):
+        """
+        Setup  RBD storageclass
+        """
         self.sc_data = templating.load_yaml_to_dict(
             constants.CSI_RBD_STORAGECLASS_YAML
         )
@@ -113,6 +128,9 @@ class Container(object):
         self._setup_sc()
 
     def _setup_fs_storageclass(self):
+        """
+        Setup CephFS Storage class
+        """
         self.sc_data = templating.load_yaml_to_dict(
             constants.CSI_CEPHFS_STORAGECLASS_YAML
         )
@@ -195,6 +213,9 @@ class Container(object):
         self._delete_ocs(self.cephfs_secret_obj)
 
     def _create_ocs(self, data, state=None):
+        """
+        Create OCS object
+        """
         obj = OCS(**data)
         obj.create(do_reload=True)
         # add label so that we can delete them with ease
@@ -208,12 +229,15 @@ class Container(object):
         return obj
 
     def _delete_ocs(self, obj):
+        """"
+        Delete OCS object
+        """
         obj.delete()
         obj.ocp.wait_for_delete(obj.name)
 
     def create(self):
         """
-         create pvc and all required dependency objects
+        Create pvc and all required dependency objects
         """
         if self.interface_type == constants.CEPHBLOCKPOOL:
             self._create_rbd_pvc()
@@ -222,7 +246,7 @@ class Container(object):
 
     def delete(self):
         """
-        delete pvc and all required dependency objects
+        Delete pvc and all required dependency objects
         """
         if self.interface_type == constants.CEPHBLOCKPOOL:
             self._delete_rbd_pvc()
@@ -231,7 +255,7 @@ class Container(object):
 
     def _cleanup(self):
         """
-         Cleanup resources created by Container object
+        Cleanup resources created by Container object
         """
         label = constants.OCS4_TEST_LABEL
         test_label = label.split('=')[0]
